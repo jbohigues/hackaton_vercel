@@ -1,0 +1,116 @@
+---
+// This is your Astro component
+---
+
+<form id="myForm">
+  <input type="text" id="inputField" name="inputValue" />
+  <button type="submit">Enviar</button>
+  <div id="messagesContainer"></div>
+</form>
+
+<script>
+  const messagesContainer = document.getElementById("messagesContainer");
+  const form = document.getElementById("myForm");
+  let messages = [];
+
+  if (form) {
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const input = document.getElementById("inputField") as HTMLInputElement;
+      const inputValue = input.value;
+
+      //  user message to the UI
+      addMessageToUI("user", inputValue);
+
+      // Add user message to messages array
+      messages.push({ role: "user", content: inputValue });
+      console.log(messages);
+
+      try {
+        const response = await fetch("/api/endpoint", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ messages }),
+        });
+
+        // if (!response.ok) {
+        //   throw new Error("Network response was not ok");
+        // }
+
+        // console.log(response);
+        // const data = await response.json();
+        // console.log(data);
+        // const newMessages = data.messages;
+
+        // // Add new messages to the UI and update messages array
+        // if (messages.length) {
+        //   newMessages.forEach((message: any) => {
+        //     addMessageToUI(message.role, message.content);
+        //     messages.push(message);
+        //   });
+        // }
+
+        if (response && response.ok && response.body) {
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          let result = "";
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            result += decoder.decode(value, { stream: true });
+            messagesContainer!.textContent = result;
+          }
+        } else {
+          messagesContainer!.textContent = "Error al procesar la solicitud";
+        }
+      } catch (error) {
+        console.error("Error:", error);
+        addMessageToUI(
+          "system",
+          "An error occurred while fetching the response."
+        );
+      }
+    });
+  }
+
+  function addMessageToUI(role: any, content: any) {
+    const messageElement = document.createElement("div");
+    messageElement.className = role;
+
+    if (typeof content === "string") {
+      messageElement.textContent = content;
+    } else {
+      content
+        .filter((part: any) => part.type === "text")
+        .forEach((part: any) => {
+          const partElement = document.createElement("div");
+          partElement.textContent = part.text;
+          messageElement.appendChild(partElement);
+        });
+    }
+
+    messagesContainer?.appendChild(messageElement);
+  }
+</script>
+
+<style>
+  .user {
+    color: blue;
+    margin-bottom: 10px;
+  }
+  .assistant {
+    color: green;
+    margin-bottom: 10px;
+  }
+  .system {
+    color: red;
+    margin-bottom: 10px;
+  }
+
+  input {
+    color: black;
+  }
+</style>
