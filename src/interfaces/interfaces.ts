@@ -9,7 +9,7 @@ export interface Message {
 }
 
 export interface Option {
-  id: string;
+  id: symbol;
   text: string;
 }
 
